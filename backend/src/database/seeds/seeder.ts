@@ -60,6 +60,6 @@ async function seed() {
 }
 
 seed().catch(error => {
-  console.error('Lỗi khi seed data:', error);
+  console.error('Error during seeding:', error);
   process.exit(1);
 });

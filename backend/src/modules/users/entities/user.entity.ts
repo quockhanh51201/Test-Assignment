@@ -2,6 +2,7 @@ import { Column, CreateDateColumn, Entity, OneToMany, OneToOne, PrimaryGenerated
 import { UserCredit } from './user-credit.entity';
 import { UserFeature } from './user-feature.entity';
 import { Transaction } from '../../transactions/entities/transaction.entity';
+import { Role } from '../../../common/enums/role.enum';
 
 @Entity('users')
 export class User {
@@ -13,6 +14,12 @@ export class User {
 
   @Column({ unique: true })
   email: string;
+
+  @Column()
+  password?: string;
+
+  @Column({ type: 'enum', enum: Role, default: Role.USER })
+  role: Role;
 
   @CreateDateColumn()
   created_at: Date;
