@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,11 +14,13 @@ async function bootstrap() {
     }),
   );
 
+  app.useGlobalInterceptors(new TransformInterceptor());
+
   app.enableCors();
 
   const config = new DocumentBuilder()
     .setTitle('SaaS Credits Module API')
-    .setDescription('Tài liệu API cho hệ thống quản lý tín dụng và tính năng')
+    .setDescription('API Documentation for Credits and Features Management')
     .setVersion('1.0')
     .addBearerAuth()
     .build();
