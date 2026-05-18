@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
@@ -15,11 +15,11 @@ export class TransactionsService {
     @InjectRepository(Transaction)
     private readonly transactionRepository: Repository<Transaction>,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async buyPackage(userId: string, packageId: string): Promise<Transaction> {
     const queryRunner = this.dataSource.createQueryRunner();
-    
+
     await queryRunner.connect();
     await queryRunner.startTransaction();
 
@@ -35,7 +35,7 @@ export class TransactionsService {
       if (!user) throw new NotFoundException('User not found');
 
       // Find package with features
-      const pkg = await packageRepo.findOne({ 
+      const pkg = await packageRepo.findOne({
         where: { id: packageId },
         relations: ['features']
       });
@@ -54,12 +54,18 @@ export class TransactionsService {
       await transactionRepo.save(transaction);
 
       // 2. Update user credits
-      let userCredit = await userCreditRepo.findOne({ where: { user: { id: userId } } });
+      const userCredit = await userCreditRepo.findOne({ where: { user: { id: userId } } });
       if (!userCredit) {
-        userCredit = userCreditRepo.create({ current_credits: 0, user: { id: userId } });
+        const newCredit = userCreditRepo.create({
+          current_credits: Number(pkg.credits),
+          user: { id: userId },
+        });
+        await userCreditRepo.save(newCredit);
+      } else {
+        await userCreditRepo.update(userCredit.id, {
+          current_credits: Number(userCredit.current_credits) + Number(pkg.credits),
+        });
       }
-      userCredit.current_credits = Number(userCredit.current_credits) + Number(pkg.credits);
-      await userCreditRepo.save(userCredit);
 
       // 3. Add package features to user (if not exists)
       if (pkg.features && pkg.features.length > 0) {

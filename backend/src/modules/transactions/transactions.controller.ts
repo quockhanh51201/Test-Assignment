@@ -3,18 +3,19 @@ import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { TransactionsService } from './transactions.service';
 import { BuyPackageDto } from './dto/buy-package.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Transactions')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('transactions')
 export class TransactionsController {
-  constructor(private readonly transactionsService: TransactionsService) {}
+  constructor(private readonly transactionsService: TransactionsService) { }
 
   @Post('buy')
   @ApiOperation({ summary: 'Buy a package using its ID' })
-  buyPackage(@Req() req: any, @Body() buyPackageDto: BuyPackageDto) {
-    return this.transactionsService.buyPackage(req.user.id, buyPackageDto.package_id);
+  buyPackage(@CurrentUser() user: any, @Body() buyPackageDto: BuyPackageDto) {
+    return this.transactionsService.buyPackage(user.userId, buyPackageDto.package_id);
   }
 
   @Get()

@@ -6,19 +6,29 @@ import { EmptyState } from '../../components/common/EmptyState';
 import { Coins, Zap, Receipt } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/common/Button';
+import { useTransactionsQuery } from '../../hooks/useTransactions';
 
 export const Dashboard: React.FC = () => {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [getTransactions] = useTransactionsQuery();
 
   const fetchDashboard = async () => {
     setLoading(true);
     setError(null);
     try {
-      // Assuming GET /users/me returns { credits, unlockedFeatures, transactions } via transform interceptor
-      const res = await api.get('/users/me');
-      setData(res.data);
+      const [userRes, transactions] =
+        await Promise.all([
+          api.get('/users/me'),
+          getTransactions(),
+        ]);
+
+      setData(userRes.data);
+      setTransactions(transactions);
+      console.log(transactions);
+
     } catch (err: any) {
       setError(err);
     } finally {
@@ -33,9 +43,9 @@ export const Dashboard: React.FC = () => {
   if (error) return <ErrorState error={error} onRetry={fetchDashboard} title="Không tải được dữ liệu" />;
   if (loading && !data) return <LoadingState message="Đang đồng bộ dữ liệu tài khoản..." />;
 
-  const credits = data?.userCredits?.[0]?.current_credits || 0;
-  const features = data?.userFeatures || [];
-  
+  const credits = data?.credit?.current_credits || 0;
+  const features = data?.features || [];
+
   // Note: Transactions might be fetched via a separate API like /transactions/me depending on BE implementation
   // We'll display empty state for transactions if none
 
@@ -82,16 +92,87 @@ export const Dashboard: React.FC = () => {
       <div className="card">
         <div className="flex items-center gap-3 mb-6">
           <Receipt className="w-5 h-5 text-slate-400" />
-          <h3 className="font-bold text-slate-800 text-lg">Lịch sử giao dịch</h3>
+          <h3 className="font-bold text-slate-800 text-lg">
+            Lịch sử giao dịch
+          </h3>
         </div>
-        
-        {/* Empty state for transactions */}
-        <EmptyState 
-          icon={<Receipt />} 
-          title="Chưa có giao dịch" 
-          description="Lịch sử nạp credits của bạn sẽ hiển thị tại đây." 
-          action={{ label: 'Xem các gói Credits', onClick: () => window.location.href = '/packages' }}
-        />
+
+        {transactions.length === 0 ? (
+          <EmptyState
+            icon={<Receipt />}
+            title="Chưa có giao dịch"
+            description="Lịch sử nạp credits của bạn sẽ hiển thị tại đây."
+            action={{
+              label: 'Xem các gói Credits',
+              onClick: () => (window.location.href = '/packages'),
+            }}
+          />
+        ) : (
+          <div className="space-y-4">
+            {transactions.map((transaction: any) => (
+              <div
+                key={transaction.id}
+                className="border border-slate-200 rounded-2xl p-5 hover:shadow-md transition bg-white"
+              >
+                <div className="flex justify-between items-start">
+                  {/* Left */}
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-base">
+                        {transaction.package?.name}
+                      </h4>
+
+                      <p className="text-sm text-slate-500 mt-1">
+                        {transaction.package?.description}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
+                      <span>
+                        {new Date(
+                          transaction.created_at,
+                        ).toLocaleString('vi-VN')}
+                      </span>
+
+                      <span>•</span>
+
+                      <span>
+                        +{transaction.package?.credits ?? 0}{' '}
+                        Credits
+                      </span>
+                    </div>
+
+                    <span
+                      className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${transaction.status?.toLowerCase() ===
+                        'success'
+                        ? 'bg-green-50 text-green-700 border-green-200'
+                        : 'bg-red-50 text-red-700 border-red-200'
+                        }`}
+                    >
+                      {transaction.status?.toLowerCase() ===
+                        'success'
+                        ? 'Thành công'
+                        : 'Thất bại'}
+                    </span>
+                  </div>
+
+                  {/* Right */}
+                  <div className="text-right">
+                    <div className="text-2xl font-extrabold text-primary">
+                      {Number(
+                        transaction.amount,
+                      ).toLocaleString('vi-VN')} VND
+                    </div>
+
+                    <div className="text-sm text-slate-500">
+                      Thanh toán
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

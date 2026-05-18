@@ -26,7 +26,6 @@ export const Packages: React.FC = () => {
   const handleBuy = async (pkg: Package) => {
     if (isSubmitting) return;
     setBuyingId(pkg.id);
-
     try {
       await buyPackage(pkg.id);
       toast.success(`Mua gói ${pkg.name} thành công!`);
@@ -58,7 +57,7 @@ export const Packages: React.FC = () => {
 
             <div className="mb-6">
               <div className="flex items-baseline gap-1">
-                <span className="text-4xl font-extrabold text-slate-900">${pkg.price}</span>
+                <span className="text-4xl font-extrabold text-slate-900">{Number(pkg.price).toLocaleString('vi-VN')} VND</span>
               </div>
               <p className="text-primary font-bold mt-2">+{pkg.credits} Credits</p>
             </div>
