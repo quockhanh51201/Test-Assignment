@@ -1,11 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { TransactionsService } from './transactions.service';
 import { CreateTransactionDto } from './dto/create-transaction.dto';
 import { UpdateTransactionDto } from './dto/update-transaction.dto';
+import { BuyPackageDto } from './dto/buy-package.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 
 @Controller('transactions')
+@UseGuards(JwtAuthGuard)
 export class TransactionsController {
   constructor(private readonly transactionsService: TransactionsService) {}
+
+  @Post('buy')
+  buyPackage(@Req() req: any, @Body() buyPackageDto: BuyPackageDto) {
+    return this.transactionsService.buyPackage(req.user.id, buyPackageDto.package_id);
+  }
 
   @Post()
   create(@Body() createTransactionDto: CreateTransactionDto) {
