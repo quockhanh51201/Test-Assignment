@@ -92,23 +92,24 @@ export class TransactionsService {
     }
   }
 
-  create(createTransactionDto: CreateTransactionDto) {
-    return 'This action adds a new transaction';
+  async findAllByUser(userId: string): Promise<Transaction[]> {
+    return this.transactionRepository.find({
+      where: { user: { id: userId } },
+      relations: ['package'],
+      order: { created_at: 'DESC' },
+    });
   }
 
-  findAll() {
-    return `This action returns all transactions`;
-  }
+  async findOneByUser(userId: string, id: string): Promise<Transaction> {
+    const transaction = await this.transactionRepository.findOne({
+      where: { id, user: { id: userId } },
+      relations: ['package'],
+    });
 
-  findOne(id: number) {
-    return `This action returns a #${id} transaction`;
-  }
+    if (!transaction) {
+      throw new NotFoundException(`Transaction #${id} not found`);
+    }
 
-  update(id: number, updateTransactionDto: UpdateTransactionDto) {
-    return `This action updates a #${id} transaction`;
-  }
-
-  remove(id: number) {
-    return `This action removes a #${id} transaction`;
+    return transaction;
   }
 }
