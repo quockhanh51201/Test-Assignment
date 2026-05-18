@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import api from '../../api/axios';
+import React, { useState } from 'react';
 import { LoadingState } from '../../components/common/LoadingState';
 import { ErrorState } from '../../components/common/ErrorState';
 import { EmptyState } from '../../components/common/EmptyState';
@@ -7,65 +6,40 @@ import { Button } from '../../components/common/Button';
 import { Check, Package as PackageIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-
-interface Feature {
-  id: string;
-  name: string;
-}
-
-interface Package {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  credits: number;
-  features: Feature[];
-}
+import { useGetPackagesQuery, type Package } from '../../hooks/usePackages';
+import { useBuyPackageMutation } from '../../hooks/useTransactions';
 
 export const Packages: React.FC = () => {
-  const [packages, setPackages] = useState<Package[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
+  const { data: packages, loading, error, refetch } = useGetPackagesQuery();
   const [buyingId, setBuyingId] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const fetchPackages = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await api.get('/packages');
-      // Axios interceptor maps response to response.data. The actual data is in res.data if the BE follows transform.interceptor structure {data, statusCode, message}
-      // Wait, interceptor extracts response.data, so res here IS { statusCode, message, data }
-      setPackages(res.data);
-    } catch (err: any) {
-      setError(err);
-    } finally {
-      setLoading(false);
+  const [buyPackage, { loading: isSubmitting }] = useBuyPackageMutation({
+    onCompleted: () => {
+      navigate('/dashboard');
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Mua thất bại. Vui lòng thử lại.');
     }
-  };
-
-  useEffect(() => {
-    fetchPackages();
-  }, []);
+  });
 
   const handleBuy = async (pkg: Package) => {
-    if (buyingId) return;
+    if (isSubmitting) return;
     setBuyingId(pkg.id);
-    
+
     try {
-      await api.post('/transactions/buy', { packageId: pkg.id });
+      await buyPackage(pkg.id);
       toast.success(`Mua gói ${pkg.name} thành công!`);
-      navigate('/dashboard');
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Mua thất bại. Vui lòng thử lại.');
+    } catch (err) {
+      // Error is handled by onError callback
     } finally {
       setBuyingId(null);
     }
   };
 
-  if (error) return <ErrorState error={error} onRetry={fetchPackages} title="Không tải được danh sách gói" />;
-  if (loading && packages.length === 0) return <LoadingState message="Đang tải danh sách gói..." />;
-  if (packages.length === 0) return <EmptyState icon={<PackageIcon />} title="Chưa có gói nào" description="Hệ thống đang cập nhật các gói Credit. Vui lòng quay lại sau." />;
+  if (error) return <ErrorState error={error} onRetry={refetch} title="Không tải được danh sách gói" />;
+  if (loading && !packages) return <LoadingState message="Đang tải danh sách gói..." />;
+  if (packages && packages.length === 0) return <EmptyState icon={<PackageIcon />} title="Chưa có gói nào" description="Hệ thống đang cập nhật các gói Credit. Vui lòng quay lại sau." />;
 
   return (
     <div>
@@ -75,13 +49,13 @@ export const Packages: React.FC = () => {
       </div>
 
       <div className="grid md:grid-cols-3 gap-8">
-        {packages.map((pkg) => (
+        {packages?.map((pkg) => (
           <div key={pkg.id} className="card flex flex-col hover:shadow-md transition-shadow relative overflow-hidden">
             <div className="mb-6">
               <h3 className="text-xl font-bold text-slate-800 mb-2">{pkg.name}</h3>
               <p className="text-slate-500 text-sm h-10">{pkg.description}</p>
             </div>
-            
+
             <div className="mb-6">
               <div className="flex items-baseline gap-1">
                 <span className="text-4xl font-extrabold text-slate-900">${pkg.price}</span>
@@ -98,11 +72,11 @@ export const Packages: React.FC = () => {
               ))}
             </ul>
 
-            <Button 
-              className="w-full mt-auto" 
+            <Button
+              className="w-full mt-auto"
               onClick={() => handleBuy(pkg)}
-              isLoading={buyingId === pkg.id}
-              disabled={buyingId !== null} // Disable all buttons if one is processing
+              isLoading={buyingId === pkg.id && isSubmitting}
+              disabled={isSubmitting} // Disable all buttons if one is processing
             >
               Mua ngay
             </Button>
