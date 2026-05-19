@@ -20,8 +20,8 @@ export class TransactionsController {
 
   @Get()
   @ApiOperation({ summary: 'Get all transactions for the authenticated user' })
-  findAll(@Req() req: any) {
-    return this.transactionsService.findAllByUser(req.user.id);
+  findAll(@CurrentUser() user: any) {
+    return this.transactionsService.findAllByUser(user.userId);
   }
 
   @Get(':id')
